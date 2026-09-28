@@ -7,68 +7,104 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 1. Model Katalog Busana (Kebaya, Jas Formal, Gaun, Beskap, Aksesoris)
-model Item {
-  id          Int          @id @default(autoincrement())
-  code        String       @unique // Contoh: KBY-01, JAS-01
-  name        String       // Contoh: Kebaya Brokat Maroon Modern
-  category    String       // Kebaya, Jas Formal, Gaun Pengantin, Beskap Adat, Aksesoris
-  size        String       @default("All Size") // S, M, L, XL, All Size
-  rentalPrice Int          // Harga sewa per hari (Rp)
-  stock       Int          @default(1)
-  status      String       @default("AVAILABLE") // AVAILABLE, RENTED, LAUNDRY, MAINTENANCE
-  description String?      // Keterangan bahan, warna, kelengkapan
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  rentalItems RentalItem[]
+enum UserRole {
+  ADMIN_LSP
+  ASESOR
+  ASESI_SISWA
 }
 
-// 2. Model Data Pelanggan / Penyewa
-model Customer {
-  id           Int                 @id @default(autoincrement())
-  name         String
-  phone        String
-  address      String?
-  idCardNumber String?             // Nomor KTP / SIM Jaminan
-  createdAt    DateTime            @default(now())
-  rentals      RentalTransaction[]
+enum AssessmentStatus {
+  TERDAFTAR
+  PROSES_NILAI
+  KOMPETEN
+  BELUM_KOMPETEN
 }
 
-// 3. Model Transaksi Persewaan Busana
-model RentalTransaction {
-  id                Int          @id @default(autoincrement())
-  transactionCode   String       @unique // Contoh: SE-82383
-  customerId        Int
-  customer          Customer     @relation(fields: [customerId], references: [id])
-  cashierName       String       @default("Seli (Kasir)")
-  pickupDate        DateTime     // Tanggal Ambil (H-1)
-  eventDate         DateTime     // Hari H (Tanggal Pakai)
-  returnDate        DateTime     // Tanggal Pulang / Kembali (H+1)
-  actualReturnDate  DateTime?    // Tanggal pengembalian riil oleh pelanggan
-  totalBasePrice    Int          // Total tarif sewa busana
-  additionalCharge  Int          @default(0) // Biaya charge / aksesoris tambahan
-  discount          Int          @default(0) // Diskon promo (Rp)
-  finalPrice        Int          // Total tagihan akhir
-  paidAmount        Int          // Nominal dibayar (DP minimal Rp 50.000 atau Lunas)
-  remainingAmount   Int          // Sisa tagihan / kekurangan (Rp)
-  paymentType       String       @default("DP") // DP, LUNAS
-  paymentMethod     String       @default("TUNAI") // TUNAI, TRANSFER, QRIS
-  rentalStatus      String       @default("BOOKING") // BOOKING, DIAMBIL, SELESAI, BATAL, TERLAMBAT
-  customerGuarantee String       @default("E-KTP") // E-KTP, SIM, KTP Pelajar
-  fittingNotes      String?      // Catatan vermak/ukuran: "Jas dikecilin 3 cm di pinggang..."
-  penaltyFee        Int          @default(0) // Denda keterlambatan jika lewat returnDate
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  rentalItems       RentalItem[]
+model User {
+  id              Int                 @id @default(autoincrement())
+  username        String              @unique
+  password        String
+  nama            String
+  role            UserRole
+  kelas           String?
+  nisn            String?             @unique
+  noRegAsesor     String?             @unique
+  studentSessions AssessmentSession[] @relation("StudentSessions")
+  assessorSessions AssessmentSession[] @relation("AssessorSessions")
 }
 
-// 4. Model Rincian Busana dalam Transaksi (Pivot Relation)
-model RentalItem {
-  id                  Int               @id @default(autoincrement())
-  rentalTransactionId Int
-  rentalTransaction   RentalTransaction @relation(fields: [rentalTransactionId], references: [id], onDelete: Cascade)
-  itemId              Int
-  item                Item              @relation(fields: [itemId], references: [id])
-  priceAtRent         Int               // Harga sewa pada saat transaksi dibuat
-  itemCustomNote      String?           // Catatan khusus item ini
+model CertificationScheme {
+  id        Int              @id @default(autoincrement())
+  kodeSkema String           @unique
+  namaSkema String
+  jurusan   String
+  units     CompetencyUnit[]
+  sessions  AssessmentSession[]
+}
+
+model CompetencyUnit {
+  id          Int                @id @default(autoincrement())
+  schemeId    Int
+  scheme      CertificationScheme @relation(fields: [schemeId], references: [id], onDelete: Cascade)
+  kodeUnit    String
+  judulUnit   String
+  deskripsi   String
+  results     CompetencyResult[]
+  selfAssessments SelfAssessment[]
+
+  @@unique([schemeId, kodeUnit])
+}
+
+model AssessmentSession {
+  id                 Int                  @id @default(autoincrement())
+  schemeId           Int
+  scheme             CertificationScheme @relation(fields: [schemeId], references: [id])
+  studentId          Int
+  student            User                 @relation("StudentSessions", fields: [studentId], references: [id])
+  assessorId         Int?
+  assessor           User?                @relation("AssessorSessions", fields: [assessorId], references: [id])
+  tglUjian           DateTime             @default(now())
+  statusAsesmen      AssessmentStatus     @default(TERDAFTAR)
+  rekomendasiAsesor  String?
+  evidence           PortfolioEvidence[]
+  results            CompetencyResult[]
+  selfAssessments    SelfAssessment[]
+
+  @@unique([schemeId, studentId])
+}
+
+model PortfolioEvidence {
+  id             Int              @id @default(autoincrement())
+  sessionId      Int
+  session        AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  judulKarya     String
+  linkGithub     String
+  linkDemoWeb    String
+  fileDokumenUrl String?
+  catatanAsesi   String?
+  createdAt      DateTime         @default(now())
+}
+
+model CompetencyResult {
+  id               Int              @id @default(autoincrement())
+  sessionId        Int
+  session          AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  unitId           Int
+  unit             CompetencyUnit    @relation(fields: [unitId], references: [id])
+  isCompetent      Boolean?
+  catatanObservasi String?
+
+  @@unique([sessionId, unitId])
+}
+
+model SelfAssessment {
+  id          Int              @id @default(autoincrement())
+  sessionId   Int
+  session     AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  unitId      Int
+  unit        CompetencyUnit    @relation(fields: [unitId], references: [id])
+  isCompetent Boolean
+  catatan     String?
+
+  @@unique([sessionId, unitId])
 }

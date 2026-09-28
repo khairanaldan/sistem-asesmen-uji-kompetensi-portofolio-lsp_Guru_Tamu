@@ -1,259 +1,92 @@
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
+
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Memulai proses seeding data awal SEWA AJA...');
+  await prisma.competencyResult.deleteMany();
+  await prisma.selfAssessment.deleteMany();
+  await prisma.portfolioEvidence.deleteMany();
+  await prisma.assessmentSession.deleteMany();
+  await prisma.competencyUnit.deleteMany();
+  await prisma.certificationScheme.deleteMany();
+  await prisma.user.deleteMany();
 
-  // 1. Bersihkan data lama jika ada
-  await prisma.rentalItem.deleteMany({});
-  await prisma.rentalTransaction.deleteMany({});
-  await prisma.item.deleteMany({});
-  await prisma.customer.deleteMany({});
+  const password = await bcrypt.hash('password123', 10);
+  const [admin, assessor, student, secondStudent] = await Promise.all([
+    prisma.user.create({ data: { username: 'adminlsp', password, nama: 'Admin LSP', role: 'ADMIN_LSP' } }),
+    prisma.user.create({ data: { username: 'asesor', password, nama: 'Asesor', role: 'ASESOR', noRegAsesor: 'MET.000.004812.2024' } }),
+    prisma.user.create({ data: { username: 'asesisiswa', password, nama: 'Asesi Siswa', role: 'ASESI_SISWA', kelas: 'Rekayasa Perangkat Lunak', nisn: '0075821941' } }),
+    prisma.user.create({ data: { username: 'siswa2', password, nama: 'Asesi Siswa 2', role: 'ASESI_SISWA', kelas: 'Teknik Komputer dan Jaringan', nisn: '0075821952' } })
+  ]);
 
-  // 2. Data Katalog Busana (Kebaya, Jas, Gaun, Beskap, Aksesoris)
-  const itemsData = [
-    {
-      code: 'KBY-01',
-      name: 'Kebaya Brokat Maroon Modern',
-      category: 'Kebaya',
-      size: 'M',
-      rentalPrice: 150000,
-      stock: 1,
-      status: 'AVAILABLE',
-      description: 'Bahan brokat premium warna maroon dengan furing katun adem, cocok untuk wisuda dan resepsi.'
-    },
-    {
-      code: 'KBY-02',
-      name: 'Kebaya Encim Kartini Hijau Sage',
-      category: 'Kebaya',
-      size: 'L',
-      rentalPrice: 135000,
-      stock: 1,
-      status: 'AVAILABLE',
-      description: 'Model kartini klasik warna hijau sage pastel, bordir tangan halus.'
-    },
-    {
-      code: 'KBY-03',
-      name: 'Kebaya Kutubaru Beludru Hitam Emas',
-      category: 'Kebaya',
-      size: 'All Size',
-      rentalPrice: 175000,
-      stock: 1,
-      status: 'RENTED',
-      description: 'Kutubaru beludru anggun berpadu aksen benang emas, ideal untuk seragam keluarga pengantin.'
-    },
-    {
-      code: 'KBY-04',
-      name: 'Kebaya Wisuda Payet Rose Gold',
-      category: 'Kebaya',
-      size: 'S',
-      rentalPrice: 160000,
-      stock: 1,
-      status: 'AVAILABLE',
-      description: 'Payet mewah warna rose gold dengan model cape pundak modern.'
-    },
-    {
-      code: 'JAS-01',
-      name: 'Jas Formal Pria Hitam Slim Fit',
-      category: 'Jas Formal',
-      size: 'L',
-      rentalPrice: 150000,
-      stock: 1,
-      status: 'AVAILABLE',
-      description: 'Setelan jas hitam bahan semi-wool berpadu celana formal, cocok untuk sidang skripsi dan wisuda.'
-    },
-    {
-      code: 'JAS-02',
-      name: 'Jas Tuxedo Navy Blue Satin Lapel',
-      category: 'Jas Formal',
-      size: 'XL',
-      rentalPrice: 180000,
-      stock: 1,
-      status: 'RENTED',
-      description: 'Tuxedo biru tua satin lapel mengkilap eksklusif untuk acara resepsi malam.'
-    },
-    {
-      code: 'JAS-03',
-      name: 'Jas Casual Abu-Abu Charcoal',
-      category: 'Jas Formal',
-      size: 'M',
-      rentalPrice: 140000,
-      stock: 1,
-      status: 'AVAILABLE',
-      description: 'Warna abu-abu charcoal netral, model modern 2 kancing.'
-    },
-    {
-      code: 'GUN-01',
-      name: 'Gaun Pengantin Ballgown Putih Mutiara',
-      category: 'Gaun Pengantin',
-      size: 'All Size',
-      rentalPrice: 450000,
-      stock: 1,
-      status: 'AVAILABLE',
-      description: 'Gaun pengantin mekar anggun dengan taburan mutiara swarovski dan ekor 1.5 meter.'
-    },
-    {
-      code: 'GUN-02',
-      name: 'Gaun Pesta A-Line Lilac Lavender',
-      category: 'Gaun Pengantin',
-      size: 'M',
-      rentalPrice: 220000,
-      stock: 1,
-      status: 'AVAILABLE',
-      description: 'Gaun pesta manis warna lilac dengan bahan tile lembut.'
-    },
-    {
-      code: 'BSK-01',
-      name: 'Beskap Sunda Putih Bordir Silver',
-      category: 'Beskap Adat',
-      size: 'L',
-      rentalPrice: 160000,
-      stock: 1,
-      status: 'AVAILABLE',
-      description: 'Setelan beskap Sunda putih lengkap dengan kain bendo dan sabuk boro.'
-    },
-    {
-      code: 'BSK-02',
-      name: 'Beskap Jawa Landung Hitam Beludru',
-      category: 'Beskap Adat',
-      size: 'XL',
-      rentalPrice: 170000,
-      stock: 1,
-      status: 'AVAILABLE',
-      description: 'Beskap adat Jawa corak kraton bahan beludru premium hitam legam.'
-    },
-    {
-      code: 'AKS-01',
-      name: 'Set Dasi Kupu & Pocket Square Emas',
-      category: 'Aksesoris',
-      size: 'All Size',
-      rentalPrice: 25000,
-      stock: 1,
-      status: 'AVAILABLE',
-      description: 'Aksesoris pelengkap jas formal warna emas satin.'
-    }
-  ];
+  const rpl = await prisma.certificationScheme.create({ data: {
+    kodeSkema: 'RPL-WEB-01', namaSkema: 'Pengembang Aplikasi Web', jurusan: 'Rekayasa Perangkat Lunak',
+    units: { create: [
+      { kodeUnit: 'J.620100.004.01', judulUnit: 'Menggunakan Struktur Data', deskripsi: 'Menerapkan struktur data yang sesuai dengan kebutuhan aplikasi.' },
+      { kodeUnit: 'J.620100.009.01', judulUnit: 'Menggunakan Spesifikasi Program', deskripsi: 'Menerjemahkan spesifikasi menjadi rancangan program.' },
+      { kodeUnit: 'J.620100.025.02', judulUnit: 'Melakukan Debugging Program', deskripsi: 'Menemukan dan memperbaiki kesalahan program.' }
+    ] }
+  }, include: { units: true } });
 
-  const createdItems = [];
-  for (const item of itemsData) {
-    const res = await prisma.item.create({ data: item });
-    createdItems.push(res);
-  }
-  console.log(`✅ Berhasil menambahkan ${createdItems.length} koleksi busana.`);
+  const tkj = await prisma.certificationScheme.create({ data: {
+    kodeSkema: 'TKJ-NET-01', namaSkema: 'Teknisi Jaringan Komputer', jurusan: 'Teknik Komputer dan Jaringan',
+    units: { create: [
+      { kodeUnit: 'J.611000.001.01', judulUnit: 'Merancang Pengalamatan Jaringan', deskripsi: 'Menyusun skema alamat dan subnet jaringan.' },
+      { kodeUnit: 'J.611000.010.02', judulUnit: 'Memasang Jaringan Nirkabel', deskripsi: 'Mengonfigurasi perangkat akses jaringan nirkabel.' },
+      { kodeUnit: 'J.611000.012.02', judulUnit: 'Mengonfigurasi Switch', deskripsi: 'Mengonfigurasi switch sesuai kebutuhan topologi.' }
+    ] }
+  }, include: { units: true } });
 
-  // 3. Data Pelanggan / Penyewa
-  const c1 = await prisma.customer.create({
-    data: {
-      name: 'Siti Nurhaliza',
-      phone: '0812-7890-1234',
-      address: 'Jl. ZA Pagar Alam No. 45, Bandar Lampung',
-      idCardNumber: '1871012345670001'
-    }
-  });
+  const tjat = await prisma.certificationScheme.create({ data: {
+    kodeSkema: 'TJAT-FTTH-01', namaSkema: 'Teknisi Instalasi Fiber Optik', jurusan: 'Teknik Jaringan Akses Telekomunikasi',
+    units: { create: [
+      { kodeUnit: 'J.611000.020.01', judulUnit: 'Menyiapkan Material dan Perangkat Fiber Optik', deskripsi: 'Mengidentifikasi material, perangkat, dan alat kerja instalasi.' },
+      { kodeUnit: 'J.611000.021.01', judulUnit: 'Melaksanakan Instalasi Kabel Fiber Optik', deskripsi: 'Melakukan penarikan dan pemasangan kabel sesuai prosedur.' },
+      { kodeUnit: 'J.611000.022.01', judulUnit: 'Melakukan Pengukuran Jaringan Fiber Optik', deskripsi: 'Mengukur dan menguji kualitas link fiber optik.' }
+    ] }
+  }, include: { units: true } });
 
-  const c2 = await prisma.customer.create({
-    data: {
-      name: 'Rizky Pratama',
-      phone: '0821-8899-7711',
-      address: 'Perum Beringin Raya Blok C, Natar',
-      idCardNumber: '09234567812'
-    }
-  });
+  const animasi = await prisma.certificationScheme.create({ data: {
+    kodeSkema: 'ANIM-2D-01', namaSkema: 'Pembuatan Animasi 2D', jurusan: 'Animasi',
+    units: { create: [
+      { kodeUnit: 'ANIM.001.01', judulUnit: 'Membuat Desain Karakter', deskripsi: 'Mengembangkan desain karakter berdasarkan brief dan lembar model.' },
+      { kodeUnit: 'ANIM.002.01', judulUnit: 'Membuat Storyboard', deskripsi: 'Menyusun storyboard dengan alur visual dan komposisi adegan.' },
+      { kodeUnit: 'ANIM.003.01', judulUnit: 'Membuat Animasi 2D', deskripsi: 'Menganimasikan adegan 2D sesuai prinsip gerak dan timing.' }
+    ] }
+  }, include: { units: true } });
 
-  const c3 = await prisma.customer.create({
-    data: {
-      name: 'Dewi Lestari',
-      phone: '0857-1122-3344',
-      address: 'Jl. Teuku Umar No. 12, Kedaton',
-      idCardNumber: '1871029876540003'
-    }
-  });
-  console.log('✅ Berhasil menambahkan 3 data pelanggan awal.');
-
-  // 4. Data Transaksi Persewaan Acuan ("SE-82383" & "SE-82384")
-  // Hitung tanggal: H-1, H, H+1 dari hari ini
   const today = new Date();
-  const hMinus1 = new Date(today);
-  hMinus1.setDate(today.getDate() - 1);
-  const hariH = new Date(today);
-  const hPlus1 = new Date(today);
-  hPlus1.setDate(today.getDate() + 1);
+  const activeSession = await prisma.assessmentSession.create({ data: {
+    schemeId: rpl.id, studentId: student.id, assessorId: assessor.id,
+    tglUjian: today, statusAsesmen: 'PROSES_NILAI',
+    results: { create: rpl.units.map((unit) => ({ unitId: unit.id })) },
+    selfAssessments: { create: rpl.units.map((unit, index) => ({ unitId: unit.id, isCompetent: index < 2, catatan: index < 2 ? 'Pernah menerapkan pada proyek pembelajaran.' : 'Perlu pendalaman debugging.' })) },
+    evidence: { create: {
+      judulKarya: 'Mini Project - Inventaris Laboratorium',
+      linkGithub: 'https://github.com/', linkDemoWeb: 'https://example.com/',
+      catatanAsesi: 'Aplikasi pencatatan inventaris dengan autentikasi dan laporan.'
+    } }
+  } });
 
-  // Transaksi 1: Siti Nurhaliza (Kebaya Kutubaru)
-  const itemKutubaru = createdItems.find(i => i.code === 'KBY-03');
-  const trx1 = await prisma.rentalTransaction.create({
-    data: {
-      transactionCode: 'SE-82383',
-      customerId: c1.id,
-      cashierName: 'Seli (Kasir)',
-      pickupDate: hMinus1,
-      eventDate: hariH,
-      returnDate: hPlus1,
-      totalBasePrice: itemKutubaru.rentalPrice,
-      additionalCharge: 0,
-      discount: 0,
-      finalPrice: itemKutubaru.rentalPrice,
-      paidAmount: 100000,
-      remainingAmount: itemKutubaru.rentalPrice - 100000,
-      paymentType: 'DP',
-      paymentMethod: 'TUNAI',
-      rentalStatus: 'BOOKING',
-      customerGuarantee: 'E-KTP',
-      fittingNotes: 'Lengan kebaya tolong dikecilkan 2 cm di ujung pergelangan.',
-      rentalItems: {
-        create: [
-          {
-            itemId: itemKutubaru.id,
-            priceAtRent: itemKutubaru.rentalPrice,
-            itemCustomNote: 'Kancing depan nomor 2 dicek kembali kerapiannya.'
-          }
-        ]
-      }
-    }
-  });
+  const completedSession = await prisma.assessmentSession.create({ data: {
+    schemeId: tkj.id, studentId: secondStudent.id, assessorId: assessor.id,
+    tglUjian: new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000), statusAsesmen: 'KOMPETEN',
+    rekomendasiAsesor: 'Seluruh unit kompetensi terpenuhi. Asesi direkomendasikan kompeten.',
+    results: { create: tkj.units.map((unit) => ({ unitId: unit.id, isCompetent: true, catatanObservasi: 'Konfigurasi dan pengujian dilakukan sesuai prosedur.' })) },
+    selfAssessments: { create: tkj.units.map((unit) => ({ unitId: unit.id, isCompetent: true, catatan: 'Mampu melakukan pekerjaan secara mandiri.' })) },
+    evidence: { create: {
+      judulKarya: 'Dokumentasi Topologi Jaringan Sekolah',
+      linkGithub: 'https://github.com/', linkDemoWeb: 'https://example.com/', catatanAsesi: 'Dokumentasi konfigurasi jaringan dan hasil pengujian.'
+    } }
+  } });
 
-  // Transaksi 2: Rizky Pratama (Jas Tuxedo)
-  const itemTuxedo = createdItems.find(i => i.code === 'JAS-02');
-  const trx2 = await prisma.rentalTransaction.create({
-    data: {
-      transactionCode: 'SE-82384',
-      customerId: c2.id,
-      cashierName: 'Seli (Kasir)',
-      pickupDate: hMinus1,
-      eventDate: hariH,
-      returnDate: hPlus1,
-      totalBasePrice: itemTuxedo.rentalPrice,
-      additionalCharge: 15000, // Charge dasi tambahan
-      discount: 10000,
-      finalPrice: itemTuxedo.rentalPrice + 15000 - 10000,
-      paidAmount: itemTuxedo.rentalPrice + 15000 - 10000,
-      remainingAmount: 0,
-      paymentType: 'LUNAS',
-      paymentMethod: 'TRANSFER',
-      rentalStatus: 'DIAMBIL',
-      customerGuarantee: 'SIM',
-      fittingNotes: 'Celana panjang dipotong sementara lipat dalam 3 cm tanpa digunting.',
-      rentalItems: {
-        create: [
-          {
-            itemId: itemTuxedo.id,
-            priceAtRent: itemTuxedo.rentalPrice,
-            itemCustomNote: 'Termasuk hanger kayu dan sarung cover jas hitam.'
-          }
-        ]
-      }
-    }
-  });
-
-  console.log(`✅ Berhasil menambahkan 2 transaksi sewa aktif: ${trx1.transactionCode} & ${trx2.transactionCode}`);
-  console.log('🎉 Seeding database selesai! Database siap digunakan.');
+  console.log(`Seed selesai: ${admin.username}, ${assessor.username}, ${student.username}; ${rpl.namaSkema}, ${tkj.namaSkema}, ${tjat.namaSkema}, ${animasi.namaSkema}; ${activeSession.id} sesi aktif dan ${completedSession.id} sesi kompeten.`);
 }
 
 main()
-  .catch((e) => {
-    console.error('❌ Error saat seeding data:', e);
-    process.exit(1);
+  .catch((error) => {
+    console.error('Seed database gagal:', error);
+    process.exitCode = 1;
   })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .finally(async () => prisma.$disconnect());

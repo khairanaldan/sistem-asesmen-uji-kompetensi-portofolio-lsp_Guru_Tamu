@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= title %> | Stelar Institute</title>
+  <meta name="description" content="Sistem Asesmen UKK dan LSP-P1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="identity" href="/"><img class="telkom-schools-logo" src="/images/telkom-schools-logo.png" alt="Telkom Schools"><span><strong>Stelar Institute</strong><small>SISTEM ASESMEN UKK DAN LSP-P1</small></span></a>
+    <div class="side-caption">WORKSPACE</div>
+    <nav class="side-nav">
+      <% if (currentUser.role === 'ADMIN_LSP') { %>
+        <a class="<%= page === 'admin' ? 'selected' : '' %>" href="/">◫ <span>Ikhtisar</span></a>
+        <a class="<%= page === 'schemes' ? 'selected' : '' %>" href="/schemes">▤ <span>Skema & unit</span></a>
+        <a class="<%= page === 'assignments' ? 'selected' : '' %>" href="/assignments">⇄ <span>Plotting asesmen</span></a>
+        <a class="<%= page === 'users' ? 'selected' : '' %>" href="/users">♙ <span>Pengguna</span></a>
+      <% } else if (currentUser.role === 'ASESOR') { %>
+        <a class="<%= page === 'assessment' || page === 'assessment-detail' ? 'selected' : '' %>" href="/assessment">▤ <span>Lembar asesmen</span></a>
+      <% } else { %>
+        <a class="<%= page === 'student' ? 'selected' : '' %>" href="/student">◫ <span>Ruang asesi</span></a>
+      <% } %>
+    </nav>
+    <div class="sidebar-bottom"><span class="live-dot"></span><span>Sistem asesmen aktif</span></div>
+  </aside>
+  <main class="main-area">
+    <header class="topbar"><div><span class="breadcrumb">Stelar Institute /</span> <strong><%= title %></strong></div>
+      <div class="profile"><span class="avatar"><%= currentUser.nama.slice(0, 1).toUpperCase() %></span><span><strong><%= currentUser.nama %></strong><small><%= currentUser.role.replaceAll('_', ' ') %><%= currentUser.kelas ? ` · ${currentUser.kelas}` : '' %></small></span><form action="/logout" method="post"><button class="logout" title="Keluar" aria-label="Keluar">↗</button></form></div>
+    </header>
+    <div class="content">
+      <% if (notice) { %><div class="notice"><%= notice %></div><% } %>
+      <% if (page === 'admin') { %>
+        <section class="lsp-hero">
+          <img class="lsp-hero-image" src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&amp;fit=crop&amp;w=1600&amp;q=85" alt="Teknisi bekerja di lingkungan produksi dan otomasi industri">
+          <div class="lsp-hero-shade"></div>
+          <aside class="hero-motion-card" aria-label="Alur asesmen digital">
+            <div class="motion-card-top"><span><i></i> ALUR ASESMEN DIGITAL</span><span>UKK · LSP-P1</span></div>
+            <h2>Bukti menjadi kompetensi.</h2>
+            <p>Portofolio, unjuk kerja, hasil.</p>
+            <div class="motion-meter" aria-hidden="true"><span></span></div>
+            <div class="motion-stages"><span><i></i>Bukti</span><span><i></i>Unjuk kerja</span><span><i></i>Hasil</span></div>
+          </aside>
+          <div class="lsp-hero-top"><span>LEMBAGA SERTIFIKASI PROFESI · SMK TELKOM</span><span>ASESMEN KOMPETENSI 2026</span></div>
+          <div class="lsp-hero-copy"><span class="hero-kicker">KOMPETENSI NYATA, TERUKUR</span><h1>Keahlian yang<br>siap bekerja.</h1><p>Asesmen terstruktur. Bukti portofolio nyata.<br>Pengakuan kompetensi untuk setiap siswa.</p><a class="hero-link" href="/assignments">Kelola asesmen <span>↗</span></a></div>
+          <div class="lsp-hero-bottom"><span>RUANG KENDALI ADMIN LSP</span><span>RPL <i>·</i> TKJ <i>·</i> TJAT <i>·</i> ANIMASI</span></div>
+        </section>
+        <div class="dashboard-intro"><div><span class="eyebrow">PUSAT KENDALI SERTIFIKASI</span><h2>Ringkasan asesmen</h2><p>Pantau kesiapan peserta dan hasil uji kompetensi.</p></div><a class="button primary" href="/assignments">+ Plot peserta</a></div>
+        <section class="metric-grid">
+          <article class="metric"><span class="metric-icon teal">▤</span><span class="metric-label">Skema aktif</span><strong><%= schemes.length %></strong><small>program sertifikasi</small></article>
+          <article class="metric"><span class="metric-icon amber">◷</span><span class="metric-label">Menunggu asesmen</span><strong><%= countByStatus.TERDAFTAR || 0 %></strong><small>peserta terdaftar</small></article>
+          <article class="metric"><span class="metric-icon blue">⌁</span><span class="metric-label">Dalam penilaian</span><strong><%= countByStatus.PROSES_NILAI || 0 %></strong><small>sedang diproses</small></article>
+          <article class="metric"><span class="metric-icon green">✓</span><span class="metric-label">Kompeten</span><strong><%= countByStatus.KOMPETEN || 0 %></strong><small>dari <%= sessions.length %> sesi asesmen</small></article>
+        </section>
+        <section class="section-block"><div class="section-title"><div><h2>Skema sertifikasi</h2><p>Program dan unit kompetensi yang tersedia</p></div><a class="text-link" href="/schemes">Kelola skema →</a></div>
+          <div class="scheme-grid"><% schemes.forEach((scheme, index) => { %><article class="scheme-tile"><span class="scheme-index">0<%= index + 1 %></span><div><strong><%= scheme.namaSkema %></strong><small><%= scheme.kodeSkema %> · <%= scheme.jurusan %></small></div><span class="unit-count"><%= scheme._count.units %> unit</span></article><% }) %></div>
+        </section>
+        <section class="section-block"><div class="section-title"><div><h2>Rekap UKK</h2><p>Seluruh peserta dan status asesmennya</p></div><span class="small-note"><%= sessions.length %> sesi</span></div>
+          <div class="table-wrap"><table><thead><tr><th>Peserta</th><th>Skema</th><th>Asesor</th><th>Tanggal uji</th><th>Status</th><th></th></tr></thead><tbody>
+            <% sessions.forEach((session) => { %><tr><td><strong><%= session.student.nama %></strong><small><%= session.student.nisn || 'NISN belum diisi' %></small></td><td><%= session.scheme.namaSkema %></td><td><%= session.assessor ? session.assessor.nama : 'Belum ditugaskan' %></td><td><%= formatDate(session.tglUjian) %></td><td><span class="badge <%= session.statusAsesmen.toLowerCase() %>"><%= session.statusAsesmen.replaceAll('_', ' ') %></span></td><td><a class="table-action" href="/results/<%= session.id %>/report">Lihat</a></td></tr><% }) %>
+            <% if (!sessions.length) { %><tr><td colspan="6" class="empty-row">Belum ada sesi ujian. Buat plotting untuk memulai.</td></tr><% } %>
+          </tbody></table></div>
+        </section>
+      <% } else if (page === 'schemes') { %>
+        <div class="page-heading"><div><div class="eyebrow">MASTER SERTIFIKASI</div><h1>Skema & unit kompetensi</h1><p>Susun skema berdasarkan standar unit kompetensi.</p></div></div>
+        <section class="form-panel"><div class="panel-heading"><div><h2>Tambah skema sertifikasi</h2><p>Masukkan unit inti sebagai baris terpisah.</p></div><span class="panel-number">01</span></div>
+          <form action="/schemes" method="post" class="form-grid">
+            <label>Kode skema<input required name="kodeSkema" placeholder="JWD-2026"></label><label>Nama skema<input required name="namaSkema" placeholder="Junior Web Developer"></label><label>Jurusan<input required name="jurusan" placeholder="Rekayasa Perangkat Lunak"></label>
+            <div class="unit-editor"><div class="unit-editor-heading"><strong>Unit kompetensi</strong><button type="button" class="button secondary compact" onclick="addUnitRow()">+ Tambah unit</button></div><div id="unit-rows">
+              <% for (let index = 0; index < 3; index += 1) { %><div class="unit-row"><input required name="unitCode" placeholder="Kode unit, contoh J.620100.004.01"><input required name="unitTitle" placeholder="Judul unit kompetensi"><input name="unitDescription" placeholder="Deskripsi singkat"><% if (index > 2) { %><button type="button" class="remove-row" onclick="this.parentElement.remove()">×</button><% } %></div><% } %>
+            </div></div>
+            <div class="form-actions"><button class="button primary">Simpan skema</button></div>
+          </form>
+        </section>
+        <section class="section-block"><div class="section-title"><div><h2>Daftar skema</h2><p><%= schemes.length %> skema terdaftar</p></div></div><div class="scheme-list">
+          <% schemes.forEach((scheme) => { %><details class="scheme-record"><summary><span><strong><%= scheme.namaSkema %></strong><small><%= scheme.kodeSkema %> · <%= scheme.jurusan %></small></span><span class="unit-count"><%= scheme.units.length %> unit</span><span class="disclosure">＋</span></summary>
+            <div class="record-body"><form action="/schemes/<%= scheme.id %>/update" method="post" class="edit-grid"><label>Nama skema<input required name="namaSkema" value="<%= scheme.namaSkema %>"></label><label>Jurusan<input required name="jurusan" value="<%= scheme.jurusan %>"></label><div class="unit-editor"><div class="unit-editor-heading"><strong>Unit kompetensi</strong><button type="button" class="button secondary compact" onclick="addUnitRow(this)">+ Tambah unit</button></div><div class="unit-rows"><% scheme.units.forEach((unit) => { %><div class="unit-row"><input required name="unitCode" value="<%= unit.kodeUnit %>" placeholder="Kode unit"><input required name="unitTitle" value="<%= unit.judulUnit %>" placeholder="Judul unit"><input name="unitDescription" value="<%= unit.deskripsi %>" placeholder="Deskripsi"><button type="button" class="remove-row" aria-label="Hapus unit" onclick="this.parentElement.remove()">×</button></div><% }) %></div></div><button class="button secondary">Simpan perubahan</button></form><form action="/schemes/<%= scheme.id %>/delete" method="post" onsubmit="return confirm('Hapus skema ini?')"><button class="danger-link">Hapus skema</button></form></div>
+          </details><% }) %>
+        </div></section>
+      <% } else if (page === 'users') { %>
+        <div class="page-heading"><div><div class="eyebrow">AKUN & IDENTITAS</div><h1>Pengguna LSP</h1><p>Atur nama tampilan Admin LSP, Asesor, dan Asesi siswa.</p></div></div>
+        <section class="form-panel create-account-panel"><div class="panel-heading"><div><h2>Tambah akun pengguna</h2><p>Kelas hanya berlaku untuk Asesi siswa; Admin LSP dan Asesor tidak memiliki kelas.</p></div><span class="panel-number">BARU</span></div>
+          <form action="/users" method="post" class="account-grid" id="create-account-form">
+            <label>Nama lengkap<input required name="nama" placeholder="Nama sesuai identitas"></label>
+            <label>Username<input required name="username" autocomplete="off" placeholder="Username untuk login"></label>
+            <label>Role<select required name="role" id="account-role" onchange="toggleAccountFields()"><option value="ASESI_SISWA">Asesi siswa</option><option value="ASESOR">Asesor</option><option value="ADMIN_LSP">Admin LSP</option></select></label>
+            <label class="account-student-field">Kelas / jurusan<select name="kelas" id="account-class"><option value="">Pilih kelas</option><% studentClasses.forEach((kelas) => { %><option value="<%= kelas %>"><%= kelas %></option><% }) %></select></label>
+            <label class="account-student-field">ID / NISN<input name="nisn" id="account-nisn" placeholder="Nomor induk siswa"></label>
+            <label class="account-assessor-field hidden-field">No. registrasi asesor<input name="noRegAsesor" id="account-assessor-id" placeholder="Nomor registrasi asesor"></label>
+            <label>Password<input required type="password" name="password" minlength="8" autocomplete="new-password" placeholder="Minimal 8 karakter"></label>
+            <div class="account-actions"><button class="button primary">Buat akun</button></div>
+          </form>
+        </section>
+        <section class="form-panel user-panel"><div class="panel-heading"><div><h2>Daftar pengguna</h2><p>Perubahan nama langsung digunakan pada dashboard dan dokumen asesmen.</p></div><span class="panel-number"><%= users.length %> akun</span></div>
+          <div class="user-list">
+            <% users.forEach((user) => { const roleLabel = user.role === 'ADMIN_LSP' ? 'Admin LSP' : user.role === 'ASESOR' ? 'Asesor' : 'Asesi siswa'; %>
+              <form action="/users/<%= user.id %>/update" method="post" class="user-row">
+                <div class="user-role"><span class="demo-icon <%= user.role === 'ADMIN_LSP' ? 'admin-icon' : user.role === 'ASESOR' ? 'assessor-icon' : 'student-icon' %>"><%= roleLabel.slice(0, 1) %></span><span><strong><%= roleLabel %></strong><small>@<%= user.username %></small></span></div>
+                <label>Nama tampilan<input required name="nama" value="<%= user.nama %>"></label>
+                <% if (user.role === 'ASESI_SISWA') { %><label>Kelas / jurusan<select required name="kelas"><option value="">Pilih kelas</option><% studentClasses.forEach((kelas) => { %><option value="<%= kelas %>" <%= user.kelas === kelas ? 'selected' : '' %>><%= kelas %></option><% }) %></select></label><label>ID / NISN<input required name="nisn" value="<%= user.nisn || '' %>" placeholder="NISN siswa"></label><% } %>
+                <% if (user.role === 'ASESOR') { %><label>No. registrasi asesor<input name="noRegAsesor" value="<%= user.noRegAsesor || '' %>" placeholder="Nomor registrasi"></label><% } %>
+                <button class="button secondary compact">Simpan</button>
+              </form>
+            <% }) %>
+          </div>
+        </section>
+      <% } else if (page === 'assignments') { %>
+        <div class="page-heading"><div><div class="eyebrow">PENJADWALAN UKK</div><h1>Plotting asesor</h1><p>Tetapkan peserta, skema sertifikasi, dan asesor penguji.</p></div></div>
+        <section class="form-panel"><div class="panel-heading"><div><h2>Buat penugasan asesmen</h2><p>Satu siswa hanya memiliki satu sesi untuk setiap skema.</p></div><span class="panel-number">01</span></div><form action="/assignments" method="post" class="form-grid three">
+          <label>Peserta<select required name="studentId"><option value="">Pilih siswa</option><% students.forEach((person) => { %><option value="<%= person.id %>"><%= person.nama %> · <%= person.nisn || 'NISN -' %></option><% }) %></select></label>
+          <label>Skema sertifikasi<select required name="schemeId"><option value="">Pilih skema</option><% schemes.forEach((scheme) => { %><option value="<%= scheme.id %>"><%= scheme.namaSkema %></option><% }) %></select></label>
+          <label>Asesor<select required name="assessorId"><option value="">Pilih asesor</option><% assessors.forEach((person) => { %><option value="<%= person.id %>"><%= person.nama %> · <%= person.noRegAsesor || 'No. reg -' %></option><% }) %></select></label>
+          <label>Tanggal uji<input type="date" name="tglUjian" value="<%= new Date().toISOString().slice(0, 10) %>"></label><div class="form-actions"><button class="button primary">Buat penugasan</button></div>
+        </form></section>
+        <section class="section-block"><div class="section-title"><div><h2>Daftar penugasan</h2><p><%= sessions.length %> sesi tercatat</p></div></div><div class="table-wrap"><table><thead><tr><th>Peserta</th><th>Skema</th><th>Asesor</th><th>Tanggal uji</th><th>Status</th></tr></thead><tbody><% sessions.forEach((session) => { %><tr><td><strong><%= session.student.nama %></strong></td><td><%= session.scheme.namaSkema %></td><td><%= session.assessor ? session.assessor.nama : 'Belum ditugaskan' %></td><td><%= formatDate(session.tglUjian) %></td><td><span class="badge <%= session.statusAsesmen.toLowerCase() %>"><%= session.statusAsesmen.replaceAll('_', ' ') %></span></td></tr><% }) %></tbody></table></div></section>
+      <% } else if (page === 'student') { %>
+        <div class="page-heading"><div><div class="eyebrow">PORTOFOLIO DIGITAL · FR-APL 02</div><h1>Ruang asesi</h1><p>Daftar skema, lengkapi asesmen mandiri, dan kirim bukti karya.</p></div></div>
+        <section class="form-panel enroll-panel"><div class="panel-heading"><div><h2>Mulai asesmen</h2><p>Pilih skema uji kompetensi yang tersedia.</p></div><span class="panel-number">01</span></div><form action="/student/enroll" method="post" class="inline-form"><select required name="schemeId"><option value="">Pilih skema sertifikasi</option><% schemes.forEach((scheme) => { %><option value="<%= scheme.id %>" <%= !scheme.units.length ? 'disabled' : '' %>><%= scheme.namaSkema %> · <%= scheme.units.length %> unit</option><% }) %></select><button class="button primary">Daftar skema</button></form></section>
+        <section class="section-block"><div class="section-title"><div><h2>Asesmen saya</h2><p>Lengkapi bukti sebelum asesor melakukan verifikasi.</p></div></div>
+          <% sessions.forEach((session) => { %><article class="assessment-card"><div class="assessment-card-top"><div><span class="eyebrow"><%= session.scheme.kodeSkema %> · <%= formatDate(session.tglUjian) %></span><h3><%= session.scheme.namaSkema %></h3><p>Asesor: <%= session.assessor ? session.assessor.nama : 'Menunggu penugasan' %></p></div><span class="badge <%= session.statusAsesmen.toLowerCase() %>"><%= session.statusAsesmen.replaceAll('_', ' ') %></span></div>
+            <% if (session.statusAsesmen === 'KOMPETEN' || session.statusAsesmen === 'BELUM_KOMPETEN') { %><div class="result-banner <%= session.statusAsesmen === 'KOMPETEN' ? 'pass' : 'fail' %>"><strong><%= session.statusAsesmen === 'KOMPETEN' ? 'Hasil: KOMPETEN' : 'Hasil: BELUM KOMPETEN' %></strong><span><%= session.rekomendasiAsesor || '' %></span><a class="button secondary compact" href="/results/<%= session.id %>/report">Cetak hasil</a></div><% } %>
+            <% if (!['KOMPETEN', 'BELUM_KOMPETEN'].includes(session.statusAsesmen)) { %><form class="portfolio-form" action="/student/<%= session.id %>/portfolio" method="post"><div class="form-subheading"><span>01</span><div><strong>Asesmen mandiri FR-APL 02</strong><small>Beri tanda pada unit yang Anda kuasai.</small></div></div><div class="apl-list"><% session.scheme.units.forEach((unit) => { const response = session.selfAssessments.find((answer) => answer.unitId === unit.id); %><label class="apl-row"><input type="checkbox" name="apl_<%= unit.id %>" <%= response && response.isCompetent ? 'checked' : '' %>><span><strong><%= unit.kodeUnit %></strong><span><%= unit.judulUnit %></span></span><em><%= response && response.isCompetent ? 'Mampu' : 'Belum dinilai' %></em></label><% }) %></div>
+              <div class="form-subheading space-top"><span>02</span><div><strong>Bukti portofolio digital</strong><small>Tautkan repository dan demo proyek mini.</small></div></div><% session.evidence.forEach((evidence) => { %><div class="evidence-existing"><strong><%= evidence.judulKarya %></strong><a href="<%= evidence.linkGithub %>" target="_blank" rel="noopener">GitHub ↗</a><a href="<%= evidence.linkDemoWeb %>" target="_blank" rel="noopener">Live demo ↗</a></div><% }) %>
+              <div class="form-grid two"><label>Judul karya<input required name="judulKarya" placeholder="Mini Project - Aplikasi Inventaris"></label><label>Link GitHub<input required type="url" name="linkGithub" placeholder="https://github.com/..." ></label><label>Link demo aplikasi<input required type="url" name="linkDemoWeb" placeholder="https://..." ></label><label>Link dokumen pendukung<input name="fileDokumenUrl" type="url" placeholder="Opsional: Drive / PDF"></label><label class="full-width">Catatan asesi<textarea name="catatanAsesi" rows="2" placeholder="Jelaskan kontribusi Anda pada proyek ini"></textarea></label></div><div class="form-actions"><button class="button primary">Simpan APL 02 & portofolio</button></div>
+            </form><% } else { %><div class="assessor-note"><strong>Rekomendasi asesor</strong><p><%= session.rekomendasiAsesor %></p></div><% } %>
+          </article><% }) %>
+          <% if (!sessions.length) { %><div class="empty-state"><span>01</span><h3>Belum ada asesmen</h3><p>Pilih skema di atas untuk mendaftar UKK.</p></div><% } %>
+        </section>
+      <% } else if (page === 'assessment') { %>
+        <div class="page-heading"><div><div class="eyebrow">PENILAIAN UNJUK KERJA</div><h1>Lembar asesmen</h1><p>Validasi portofolio dan catat hasil uji kompetensi peserta.</p></div></div>
+        <section class="section-block"><div class="section-title"><div><h2>Peserta ditugaskan</h2><p><%= sessions.length %> sesi asesmen</p></div></div><div class="table-wrap"><table><thead><tr><th>Peserta</th><th>Skema</th><th>Bukti</th><th>Tanggal uji</th><th>Status</th><th></th></tr></thead><tbody><% sessions.forEach((session) => { %><tr><td><strong><%= session.student.nama %></strong><small><%= session.student.nisn || 'NISN -' %></small></td><td><%= session.scheme.namaSkema %></td><td><%= session.evidence.length %> karya</td><td><%= formatDate(session.tglUjian) %></td><td><span class="badge <%= session.statusAsesmen.toLowerCase() %>"><%= session.statusAsesmen.replaceAll('_', ' ') %></span></td><td><a class="button secondary compact" href="/assessment/<%= session.id %>">Buka lembar</a></td></tr><% }) %><% if (!sessions.length) { %><tr><td colspan="6" class="empty-row">Belum ada sesi yang ditugaskan.</td></tr><% } %></tbody></table></div></section>
+      <% } else if (page === 'assessment-detail') { const assessment = locals.assessment; %>
+        <div class="page-heading"><div><a class="back-link" href="/assessment">← Kembali ke daftar</a><div class="eyebrow"><%= assessment.scheme.kodeSkema %> · <%= assessment.student.nisn || 'NISN -' %></div><h1><%= assessment.student.nama %></h1><p><%= assessment.scheme.namaSkema %> · Tanggal uji <%= formatDate(assessment.tglUjian) %></p></div><span class="badge <%= assessment.statusAsesmen.toLowerCase() %>"><%= assessment.statusAsesmen.replaceAll('_', ' ') %></span></div>
+        <section class="section-block evidence-section"><div class="section-title"><div><h2>Bukti portofolio</h2><p>Periksa repository dan jalankan aplikasi demonstrasi.</p></div></div><% assessment.evidence.forEach((evidence) => { %><article class="evidence-card"><div><span class="eyebrow">KARYA ASESI</span><h3><%= evidence.judulKarya %></h3><p><%= evidence.catatanAsesi || 'Tidak ada catatan tambahan.' %></p></div><div class="evidence-links"><a href="<%= evidence.linkGithub %>" target="_blank" rel="noopener">⌘ GitHub repository ↗</a><a href="<%= evidence.linkDemoWeb %>" target="_blank" rel="noopener">◉ Buka live demo ↗</a><% if (evidence.fileDokumenUrl) { %><a href="<%= evidence.fileDokumenUrl %>" target="_blank" rel="noopener">▧ Dokumen pendukung ↗</a><% } %></div></article><% }) %><% if (!assessment.evidence.length) { %><div class="empty-row">Asesi belum mengirim bukti portofolio.</div><% } %></section>
+        <section class="section-block"><form action="/assessment/<%= assessment.id %>/score" method="post" class="form-panel score-panel"><div class="panel-heading"><div><h2>Penilaian elemen kompetensi</h2><p>Nilai unjuk kerja berdasarkan bukti dan observasi langsung.</p></div><span class="panel-number">02</span></div><div class="score-list"><% assessment.scheme.units.forEach((unit) => { const result = assessment.results.find((row) => row.unitId === unit.id); %><article class="score-row"><div class="score-title"><span class="unit-code"><%= unit.kodeUnit %></span><div><strong><%= unit.judulUnit %></strong><small><%= unit.deskripsi || 'Elemen kompetensi sesuai standar skema.' %></small></div></div><div class="score-controls"><label><input type="radio" required name="result_<%= unit.id %>" value="true" <%= result && result.isCompetent === true ? 'checked' : '' %>><span class="radio-label pass">Kompeten</span></label><label><input type="radio" required name="result_<%= unit.id %>" value="false" <%= result && result.isCompetent === false ? 'checked' : '' %>><span class="radio-label fail">Belum kompeten</span></label></div><label class="observation">Catatan observasi<textarea name="observation_<%= unit.id %>" rows="2"><%= result && result.catatanObservasi || '' %></textarea></label></article><% }) %></div><label class="recommendation">Rekomendasi akhir & catatan asesor<textarea required name="rekomendasiAsesor" rows="3" placeholder="Catat ringkasan observasi dan rekomendasi hasil asesmen"><%= assessment.rekomendasiAsesor || '' %></textarea></label><div class="form-actions"><button class="button primary">Simpan hasil asesmen</button><a class="button secondary" href="/assessment/<%= assessment.id %>/report">Berita acara / cetak</a></div></form></section>
+      <% } else { %><div class="empty-state"><h1>Halaman tidak ditemukan</h1><a href="/">Kembali ke dashboard</a></div><% } %>
+      <footer class="app-footer"><span>Lembaga Sertifikasi Profesi Pihak Pertama</span><span>SMK Telkom Lampung · Sistem UKK & Portofolio</span></footer>
+    </div>
+  </main>
+</div>
+<script>
+function addUnitRow(button) {
+  const row = document.createElement('div');
+  row.className = 'unit-row';
+  row.innerHTML = '<input required name="unitCode" placeholder="Kode unit, contoh J.620100.004.01"><input required name="unitTitle" placeholder="Judul unit kompetensi"><input name="unitDescription" placeholder="Deskripsi singkat"><button type="button" class="remove-row" aria-label="Hapus unit" onclick="this.parentElement.remove()">×</button>';
+  const rows = button.closest('.unit-editor').querySelector('.unit-rows') || document.getElementById('unit-rows');
+  rows.appendChild(row);
+}
+function toggleAccountFields() {
+  const roleSelect = document.getElementById('account-role');
+  if (!roleSelect) return;
+  const isStudent = roleSelect.value === 'ASESI_SISWA';
+  const isAssessor = roleSelect.value === 'ASESOR';
+  document.querySelectorAll('.account-student-field').forEach((field) => {
+    field.classList.toggle('hidden-field', !isStudent);
+    field.querySelector('select,input').required = isStudent;
+  });
+  document.querySelectorAll('.account-assessor-field').forEach((field) => {
+    field.classList.toggle('hidden-field', !isAssessor);
+    field.querySelector('input').required = false;
+  });
+}
+toggleAccountFields();
+</script>
+</body>
+</html>
